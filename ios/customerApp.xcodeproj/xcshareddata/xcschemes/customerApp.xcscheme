@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "customerApp.app"
-               BlueprintName = "customerApp"
-               ReferencedContainer = "container:customerApp.xcodeproj">
+               BuildableName = "RealEstateCRM.app"
+               BlueprintName = "RealEstateCRM"
+               ReferencedContainer = "container:RealEstateCRM.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "customerAppTests.xctest"
-               BlueprintName = "customerAppTests"
-               ReferencedContainer = "container:customerApp.xcodeproj">
+               BuildableName = "RealEstateCRMTests.xctest"
+               BlueprintName = "RealEstateCRMTests"
+               ReferencedContainer = "container:RealEstateCRM.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "customerApp.app"
-            BlueprintName = "customerApp"
-            ReferencedContainer = "container:customerApp.xcodeproj">
+            BuildableName = "RealEstateCRM.app"
+            BlueprintName = "RealEstateCRM"
+            ReferencedContainer = "container:RealEstateCRM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "customerApp.app"
-            BlueprintName = "customerApp"
-            ReferencedContainer = "container:customerApp.xcodeproj">
+            BuildableName = "RealEstateCRM.app"
+            BlueprintName = "RealEstateCRM"
+            ReferencedContainer = "container:RealEstateCRM.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
