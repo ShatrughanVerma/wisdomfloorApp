@@ -14,7 +14,8 @@ import {
   PixelRatio,
   Platform,
 } from 'react-native';
-import { getInventoryDetails } from '../../services/api';
+import { getInventryDetails } from '../../services/api/InventorydetailsApi';
+import { getImageUrl } from '../../services/api/api';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -51,44 +52,97 @@ const DetailSection = ({ title, data }) => (
 
 const BuilderDetailsScreen = ({ navigation, route }) => {
   const { property } = route.params || {};
+  const [detail, setDetail] = useState(null);
 
-  const galleryImages = [
-    require('../../assets/images/property1.png'),
-    require('../../assets/images/property2.png'),
-    require('../../assets/images/property3.png'),
-  ];
+  useEffect(() => {
+    if (!property?._id) return;
+    getInventryDetails(property._id)
+      .then(res => { if (res.success) setDetail(res.data); })
+      .catch(err => console.log('Detail Error:', err));
+  }, [property?._id]);
 
-  const sections = useMemo(() => {
-    return [
-      {
-        title: 'Property Details',
-        data: [
-          {
-            label: 'Bedrooms',
-            value: property?.numberOfBedrooms ?? '-',
-          },
-          {
-            label: 'Bathrooms',
-            value: property?.numberOfBathrooms ?? '-',
-          },
-          {
-            label: 'Area',
-            value: property?.area
-              ? `${property.area.value} ${property.area.unit}`
-              : '-',
-          },
-          {
-            label: 'Owner',
-            value: property?.ownerName ?? '-',
-          },
-          {
-            label: 'Property Type',
-            value: property?.inventoryType?.name ?? '-',
-          },
-        ],
-      },
-    ];
-  }, [property]);
+  const d = detail || property;
+
+  const galleryImages = useMemo(() => {
+    if (d?.gallery?.length > 0) return d.gallery.map(img => getImageUrl(img?.uri || img));
+    if (d?.image) return [getImageUrl(d.image)];
+    return [];
+  }, [d]);
+
+  const sections = useMemo(() => [
+    {
+      title: 'Property Details',
+      data: [
+        { label: 'Property Name', value: d?.propertyName },
+        { label: 'Property Type', value: d?.inventoryType?.name },
+        { label: 'Specifier', value: d?.specifier },
+        { label: 'Bedrooms', value: d?.numberOfBedrooms },
+        { label: 'Bathrooms', value: d?.numberOfBathrooms },
+        { label: 'Toilets', value: d?.totalToilets },
+        { label: 'Balconies', value: d?.balconies },
+        { label: 'Area', value: d?.area ? `${d.area.value} ${d.area.unit}` : null },
+        { label: 'Asking Price', value: d?.askingPrice ? `₹${d.askingPrice} ${d?.priceUnit || ''}` : null },
+        { label: 'Guest Washroom', value: d?.guestWashroom != null ? (d.guestWashroom ? 'Yes' : 'No') : null },
+        { label: 'Servant Room', value: d?.servantRoom != null ? (d.servantRoom ? 'Yes' : 'No') : null },
+      ].filter(i => i.value != null && i.value !== ''),
+    },
+    {
+      title: 'Property Features',
+      data: [
+        { label: 'Status', value: d?.propertyStatus },
+        { label: 'Age', value: d?.ageOfProperty },
+        { label: 'Facing', value: d?.facingDirection },
+        { label: 'Overlooking', value: d?.overlooking },
+        { label: 'Road Width', value: d?.roadWidth },
+        { label: 'Total Floors', value: d?.totalFloors },
+        { label: 'Floor Available', value: d?.floorAvailable },
+        { label: 'Units per Floor', value: d?.unitsPerFloor },
+        { label: 'Sides Open', value: d?.sidesOpen },
+        { label: 'Parking', value: d?.parking },
+        { label: 'Lift', value: d?.lift != null ? (d.lift ? 'Yes' : 'No') : null },
+      ].filter(i => i.value != null && i.value !== ''),
+    },
+    {
+      title: 'Commercial Details',
+      data: [
+        { label: 'Unit Type', value: d?.commercialDetails?.unitType },
+        { label: 'Furnishing', value: d?.commercialDetails?.furnishing },
+        { label: 'Work Stations', value: d?.commercialDetails?.workStations },
+        { label: 'Cabins', value: d?.commercialDetails?.cabins },
+        { label: 'AC Count', value: d?.commercialDetails?.acCount },
+        { label: 'Pantry', value: d?.commercialDetails?.pantry != null ? (d.commercialDetails.pantry ? 'Yes' : 'No') : null },
+        { label: 'Facility', value: d?.commercialDetails?.facility != null ? (d.commercialDetails.facility ? 'Yes' : 'No') : null },
+      ].filter(i => i.value != null && i.value !== ''),
+    },
+    {
+      title: 'Apartment Details',
+      data: [
+        { label: 'Type', value: d?.apartmentDetails?.type },
+        { label: 'Project Name', value: d?.apartmentDetails?.projectName },
+        { label: 'Tower No', value: d?.apartmentDetails?.towerNo },
+        { label: 'Apartment No', value: d?.apartmentDetails?.apartmentNo },
+        { label: 'Floor', value: d?.apartmentDetails?.floor },
+        { label: 'Super Area', value: d?.apartmentDetails?.superArea },
+        { label: 'Covered Area', value: d?.apartmentDetails?.coveredArea },
+      ].filter(i => i.value != null && i.value !== ''),
+    },
+    {
+      title: 'Finance',
+      data: [
+        { label: 'Security Deposit', value: d?.securityDeposit ? `₹${d.securityDeposit}` : null },
+        { label: 'Maintenance', value: d?.maintenance ? `₹${d.maintenance}` : null },
+        { label: 'Other Charges', value: d?.otherCharges ? `₹${d.otherCharges}` : null },
+      ].filter(i => i.value != null && i.value !== ''),
+    },
+    {
+      title: 'Owners',
+      data: (d?.owners || []).map((o, i) => ({ label: `Owner ${i + 1}`, value: `${o.name} — ${o.phone}` })),
+    },
+    {
+      title: 'Representatives',
+      data: (d?.representatives || []).map((r, i) => ({ label: `Rep ${i + 1}`, value: `${r.name}${r.phone ? ' — ' + r.phone : ''}` })),
+    },
+  ].filter(s => s.data.length > 0), [d]);
     return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -100,14 +154,9 @@ const BuilderDetailsScreen = ({ navigation, route }) => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header Image */}
         <View style={styles.imageContainer}>
-          <Image
-  source={
-    property?.image
-      ? { uri: property.image }
-      : require('../../assets/images/rajauri.png')
-  }
-  style={styles.mainImage}
-/>
+          {galleryImages.length > 0 && (
+            <Image source={{ uri: galleryImages[0] }} style={styles.mainImage} resizeMode="cover" />
+          )}
 
           <TouchableOpacity
             style={styles.backButton}
@@ -127,7 +176,7 @@ const BuilderDetailsScreen = ({ navigation, route }) => {
             contentContainerStyle={styles.galleryContainer}
             style={styles.galleryOverlay}
             renderItem={({ item }) => (
-              <Image source={item} style={styles.galleryImage} />
+              <Image source={{ uri: item }} style={styles.galleryImage} resizeMode="cover" />
             )}
           />
         </View>
@@ -137,22 +186,20 @@ const BuilderDetailsScreen = ({ navigation, route }) => {
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>
-                {property?.addressSnapshot?.locality || 'No Locality'}
+                {d?.addressSnapshot?.locality || d?.addressSnapshot?.city || '-'}
               </Text>
 
               <Text style={styles.location}>
-                {property?.addressSnapshot?.address},{' '}
-                {property?.addressSnapshot?.city},{' '}
-                {property?.addressSnapshot?.state}
+                {d?.addressSnapshot?.address}, {d?.addressSnapshot?.city}, {d?.addressSnapshot?.state}
               </Text>
 
               <Text style={styles.owner}>
-                Owner : {property?.ownerName}
+                Owner: {d?.owners?.[0]?.name || '-'}
               </Text>
             </View>
 
             <Text style={styles.price}>
-              ₹{property?.askingPrice}
+              ₹{d?.askingPrice ?? '-'}
             </Text>
           </View>
         </View>
@@ -225,7 +272,7 @@ const styles = StyleSheet.create({
   backIcon: {
     width: scale(18),
     height: scale(18),
-    tintColor: '#fff',
+    tintColor: '#0b0a0a',
     resizeMode: 'contain',
   },
 

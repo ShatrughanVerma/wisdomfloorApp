@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Base URL - Update this to match your setup
 const BASE_URL = 'http://192.168.1.72:5002/api';
-export const Image_BASE_URL = 'http://192.168.1.72:5000';
+export const Image_BASE_URL = 'http://192.168.1.72:5002';
 
 // Helper function to get full image URL
 export const getImageUrl = (path) => {

@@ -55,9 +55,151 @@ const TYPE_OPTIONS = ['Duplex', 'Simplex', 'Triplex', 'Penthouse'];
 const PRICE_UNIT_OPTIONS = ['Per Sq.ft', 'Per Sq.yd', 'Per Sq.m', 'Total Price'];
 const SPECIFIER_OPTIONS = ['Owner', 'Tenant', 'Broker/Agent', 'Builder'];
 const ADDRESS_TYPE_OPTIONS = ['House', 'Apartment', 'Villa', 'Office', 'Shop'];
+const INDIA_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+];
+
+// ============ REGEX VALIDATION ============
+const REGEX = {
+  // Indian mobile numbers: 10 digits, starting 6-9. Adjust if you support other countries.
+  phone: /^[6-9]\d{9}$/,
+  pincode: /^\d{6}$/,
+  // integer or decimal, e.g. 1200 or 1200.5
+  numeric: /^\d+(\.\d+)?$/,
+  // letters/spaces only (city, state, names)
+  alpha: /^[A-Za-z\s]+$/,
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+};
+
+const isValidPhone = (v) => REGEX.phone.test(String(v).trim());
+const isValidPincode = (v) => REGEX.pincode.test(String(v).trim());
+const isValidNumeric = (v) => REGEX.numeric.test(String(v).trim());
 
 let uid = 0;
 const nextId = () => `id_${Date.now()}_${uid++}`;
+
+// ============================================================
+// STANDALONE PRESENTATIONAL COMPONENTS
+// ------------------------------------------------------------
+// IMPORTANT: These are declared OUTSIDE UnifiedForm on purpose.
+// If they were declared inside UnifiedForm's function body, every
+// keystroke (state update) would recreate them as brand-new
+// component types, forcing React to unmount/remount the inputs —
+// which is exactly what was closing the keyboard on every character.
+// Keeping them at module scope keeps their identity stable across
+// re-renders, so TextInput keeps focus and the keyboard stays open.
+// ============================================================
+
+const Dropdown = ({ label, value, options, onSelect }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <TouchableOpacity style={styles.input} onPress={() => setOpen(true)}>
+        <Text style={value ? styles.inputText : styles.placeholder}>{value || 'Select'}</Text>
+        <Image source={ICONS.dropdownArrow} style={styles.dropdownArrowIcon} resizeMode="contain" />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setOpen(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{label}</Text>
+            <FlatList
+              data={options}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    onSelect(item);
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, item === value && styles.modalItemActive]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+};
+
+const Input = ({ label, value, onChange, placeholder, keyboardType, multiline, error }) => (
+  <View style={styles.field}>
+    <Text style={styles.label}>{label}</Text>
+    <TextInput
+      style={[styles.input, multiline && styles.textArea, error && styles.inputError]}
+      value={value}
+      onChangeText={onChange}
+      placeholder={placeholder}
+      placeholderTextColor="#B5B5B5"
+      keyboardType={keyboardType}
+      multiline={multiline}
+      numberOfLines={multiline ? 4 : 1}
+    />
+    {error ? <Text style={styles.errorText}>{error}</Text> : null}
+  </View>
+);
+
+const Row = ({ children }) => <View style={styles.row}>{children}</View>;
+const Col = ({ children }) => <View style={styles.col}>{children}</View>;
+
+const AddButton = ({ label, onPress }) => (
+  <TouchableOpacity style={styles.addButtonRow} onPress={onPress}>
+    <Image source={ICONS.addCircle} style={styles.addButtonIcon} resizeMode="contain" />
+    <Text style={styles.addButtonText}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const RemoveButton = ({ onPress }) => (
+  <TouchableOpacity style={styles.removeBtn} onPress={onPress}>
+    <Text style={styles.removeBtnText}>✕</Text>
+  </TouchableOpacity>
+);
+
+const Section = ({ title, icon }) => (
+  <View style={styles.sectionRow}>
+    {icon ? <Image source={icon} style={styles.sectionIcon} resizeMode="contain" /> : null}
+    <Text style={styles.sectionTitle}>{title}</Text>
+  </View>
+);
+
+const Stepper = ({ label, value, onChange }) => (
+  <View style={styles.field}>
+    <Text style={styles.label}>{label}</Text>
+    <View style={styles.stepper}>
+      <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(Math.max(0, value - 1))}>
+        <Text style={styles.stepText}>−</Text>
+      </TouchableOpacity>
+      <Text style={styles.stepValue}>{value}</Text>
+      <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(value + 1)}>
+        <Text style={styles.stepText}>+</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+const Upload = ({ label, file, onPress }) => (
+  <View style={styles.field}>
+    <Text style={styles.label}>{label}</Text>
+    <TouchableOpacity style={[styles.input, styles.uploadBtn]} onPress={onPress}>
+      <Text style={file ? styles.inputText : styles.placeholder}>
+        {file?.name || 'Upload'}
+      </Text>
+      <Image source={ICONS.upload} style={styles.uploadIconImg} resizeMode="contain" />
+    </TouchableOpacity>
+  </View>
+);
 
 const UnifiedForm = ({ navigation, route }) => {
   const propertyName = route?.params?.propertyName || 'Property';
@@ -65,9 +207,12 @@ const UnifiedForm = ({ navigation, route }) => {
 
   // Loading state
   const [loading, setLoading] = useState(false);
-  
+
   // Form Config
   const [formConfig, setFormConfig] = useState([]);
+
+  // Field-level validation errors
+  const [errors, setErrors] = useState({});
 
   // Helper function to check if field exists in config
   const show = (fieldName) => {
@@ -194,7 +339,7 @@ const UnifiedForm = ({ navigation, route }) => {
   const [authority, setAuthority] = useState('');
 
   // ============ UPLOADS ============
-  const [gallery, setGallery] = useState(null);
+  const [gallery, setGallery] = useState([]);
   const [document, setDocument] = useState(null);
   const [layout, setLayout] = useState(null);
   const [brochure, setBrochure] = useState(null);
@@ -203,7 +348,9 @@ const UnifiedForm = ({ navigation, route }) => {
 
   // ============ VALIDATION ============
   const validateForm = () => {
-    // Check required fields based on formConfig
+    const newErrors = {};
+
+    // Required-field presence checks
     const requiredFields = {
       specifier: specifier,
       address: address,
@@ -216,19 +363,60 @@ const UnifiedForm = ({ navigation, route }) => {
 
     for (const [field, value] of Object.entries(requiredFields)) {
       if (show(field) && !value) {
-        Alert.alert('Validation Error', `Please fill ${field.replace(/([A-Z])/g, ' $1').trim()}`);
-        return false;
+        newErrors[field] = 'This field is required';
       }
     }
 
-    // Validate owners
+    // Regex checks (only run when the field has a value, so "required"
+    // errors above don't get overwritten by confusing format errors)
+    if (show('pincode') && pincode && !isValidPincode(pincode)) {
+      newErrors.pincode = 'Enter a valid 6-digit pincode';
+    }
+    if (show('city') && city && !REGEX.alpha.test(city.trim())) {
+      newErrors.city = 'City should contain letters only';
+    }
+    if (show('areaValue') && area && !isValidNumeric(area)) {
+      newErrors.areaValue = 'Enter a valid number';
+    }
+    if (show('askingPrice') && price && !isValidNumeric(price)) {
+      newErrors.askingPrice = 'Enter a valid amount';
+    }
+    if (show('roadWidth') && roadWidth && !isValidNumeric(roadWidth)) {
+      newErrors.roadWidth = 'Enter a valid number';
+    }
+    if (show('securityDeposit') && securityDeposit && !isValidNumeric(securityDeposit)) {
+      newErrors.securityDeposit = 'Enter a valid amount';
+    }
+    if (show('maintenance') && maintenance && !isValidNumeric(maintenance)) {
+      newErrors.maintenance = 'Enter a valid amount';
+    }
+
+    // Owners: required + phone format
     if (show('owners')) {
-      for (const owner of owners) {
+      owners.forEach((owner, idx) => {
         if (!owner.name || !owner.phone) {
-          Alert.alert('Validation Error', 'Please fill all owner details');
-          return false;
+          newErrors[`owner_${idx}`] = 'Please fill all owner details';
+        } else if (!isValidPhone(owner.phone)) {
+          newErrors[`owner_${idx}`] = 'Enter a valid 10-digit phone number';
         }
-      }
+      });
+    }
+
+    // Representatives: phone format only if provided
+    if (show('representatives')) {
+      representatives.forEach((rep, idx) => {
+        if (rep.phone && !isValidPhone(rep.phone)) {
+          newErrors[`rep_${idx}`] = 'Enter a valid 10-digit phone number';
+        }
+      });
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      const firstError = Object.values(newErrors)[0];
+      Alert.alert('Validation Error', firstError);
+      return false;
     }
 
     return true;
@@ -333,7 +521,9 @@ const UnifiedForm = ({ navigation, route }) => {
       const appendFile = (key, file) => {
         if (file) formData.append(key, { uri: file.uri, type: file.type || 'image/jpeg', name: file.name || `${key}.jpg` });
       };
-      if (show('gallery')) appendFile('gallery', gallery);
+      if (show('gallery') && gallery.length > 0) {
+        gallery.forEach(img => formData.append('gallery', { uri: img.uri, type: img.type || 'image/jpeg', name: img.name || 'gallery.jpg' }));
+      }
       if (show('document')) appendFile('document', document);
       if (show('layout')) appendFile('layout', layout);
       if (show('brochure')) appendFile('brochure', brochure);
@@ -354,132 +544,26 @@ const UnifiedForm = ({ navigation, route }) => {
 
   // ============ IMAGE PICKER ============
   const pickImage = (setter) => {
-    launchImageLibrary({ 
-      mediaType: 'photo',
-      quality: 0.8,
-    }, (res) => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (res) => {
       if (!res.didCancel && res.assets) {
         const asset = res.assets[0];
-        setter({ 
-          uri: asset.uri, 
-          name: asset.fileName || 'image.jpg',
-          type: asset.type || 'image/jpeg',
-        });
+        setter({ uri: asset.uri, name: asset.fileName || 'image.jpg', type: asset.type || 'image/jpeg' });
       }
     });
   };
 
-  // ============ DROPDOWN COMPONENT ============
-  const Dropdown = ({ label, value, options, onSelect }) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <View style={styles.field}>
-        <Text style={styles.label}>{label}</Text>
-        <TouchableOpacity style={styles.input} onPress={() => setOpen(true)}>
-          <Text style={value ? styles.inputText : styles.placeholder}>{value || 'Select'}</Text>
-          <Image source={ICONS.dropdownArrow} style={styles.dropdownArrowIcon} resizeMode="contain" />
-        </TouchableOpacity>
-
-        <Modal visible={open} transparent animationType="fade">
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setOpen(false)}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>{label}</Text>
-              <FlatList
-                data={options}
-                keyExtractor={(item) => item}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.modalItem}
-                    onPress={() => {
-                      onSelect(item);
-                      setOpen(false);
-                    }}
-                  >
-                    <Text style={[styles.modalItemText, item === value && styles.modalItemActive]}>
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      </View>
-    );
+  const pickMultipleImages = () => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8, selectionLimit: 0 }, (res) => {
+      if (!res.didCancel && res.assets) {
+        const newImages = res.assets.map(a => ({ uri: a.uri, name: a.fileName || 'image.jpg', type: a.type || 'image/jpeg' }));
+        setGallery(prev => [...prev, ...newImages]);
+      }
+    });
   };
 
-  // ============ INPUT COMPONENT ============
-  const Input = ({ label, value, onChange, placeholder, keyboardType, multiline }) => (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.textArea]}
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor="#B5B5B5"
-        keyboardType={keyboardType}
-        multiline={multiline}
-        numberOfLines={multiline ? 4 : 1}
-      />
-    </View>
-  );
-
-  // ============ ROW ============
-  const Row = ({ children }) => <View style={styles.row}>{children}</View>;
-  const Col = ({ children }) => <View style={styles.col}>{children}</View>;
-
-  // ============ ADD BUTTON ============
-  const AddButton = ({ label, onPress }) => (
-    <TouchableOpacity style={styles.addButtonRow} onPress={onPress}>
-      <Image source={ICONS.addCircle} style={styles.addButtonIcon} resizeMode="contain" />
-      <Text style={styles.addButtonText}>{label}</Text>
-    </TouchableOpacity>
-  );
-
-  // ============ REMOVE BUTTON ============
-  const RemoveButton = ({ onPress }) => (
-    <TouchableOpacity style={styles.removeBtn} onPress={onPress}>
-      <Text style={styles.removeBtnText}>✕</Text>
-    </TouchableOpacity>
-  );
-
-  // ============ SECTION TITLE ============
-  const Section = ({ title, icon }) => (
-    <View style={styles.sectionRow}>
-      {icon ? <Image source={icon} style={styles.sectionIcon} resizeMode="contain" /> : null}
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
-  );
-
-  // ============ STEPPER ============
-  const Stepper = ({ label, value, onChange }) => (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.stepper}>
-        <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(Math.max(0, value - 1))}>
-          <Text style={styles.stepText}>−</Text>
-        </TouchableOpacity>
-        <Text style={styles.stepValue}>{value}</Text>
-        <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(value + 1)}>
-          <Text style={styles.stepText}>+</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // ============ UPLOAD ============
-  const Upload = ({ label, file, onPress }) => (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TouchableOpacity style={[styles.input, styles.uploadBtn]} onPress={onPress}>
-        <Text style={file ? styles.inputText : styles.placeholder}>
-          {file?.name || 'Upload'}
-        </Text>
-        <Image source={ICONS.upload} style={styles.uploadIconImg} resizeMode="contain" />
-      </TouchableOpacity>
-    </View>
-  );
+  const removeGalleryImage = (index) => {
+    setGallery(prev => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -526,14 +610,15 @@ const UnifiedForm = ({ navigation, route }) => {
                         value={owner.name}
                         onChange={(val) => updateOwner(owner.id, 'name', val)}
                         placeholder="Enter owner name"
+                        error={errors[`owner_${index}`]}
                       />
                     </Col>
                     <Col>
                       <Input
                         label="Phone number"
                         value={owner.phone}
-                        onChange={(val) => updateOwner(owner.id, 'phone', val)}
-                        placeholder="Enter phone number"
+                        onChange={(val) => updateOwner(owner.id, 'phone', val.replace(/[^0-9]/g, '').slice(0, 10))}
+                        placeholder="10-digit phone number"
                         keyboardType="numeric"
                       />
                     </Col>
@@ -550,14 +635,15 @@ const UnifiedForm = ({ navigation, route }) => {
                         value={owner.name}
                         onChange={(val) => updateOwner(owner.id, 'name', val)}
                         placeholder="Enter owner name"
+                        error={errors[`owner_${index + 1}`]}
                       />
                     </Col>
                     <Col>
                       <Input
                         label="Phone number"
                         value={owner.phone}
-                        onChange={(val) => updateOwner(owner.id, 'phone', val)}
-                        placeholder="Enter phone number"
+                        onChange={(val) => updateOwner(owner.id, 'phone', val.replace(/[^0-9]/g, '').slice(0, 10))}
+                        placeholder="10-digit phone number"
                         keyboardType="numeric"
                       />
                     </Col>
@@ -583,9 +669,10 @@ const UnifiedForm = ({ navigation, route }) => {
                       <Input
                         label="Phone number"
                         value={rep.phone}
-                        onChange={(val) => updateRepresentative(rep.id, 'phone', val)}
-                        placeholder="Enter phone number"
+                        onChange={(val) => updateRepresentative(rep.id, 'phone', val.replace(/[^0-9]/g, '').slice(0, 10))}
+                        placeholder="10-digit phone number"
                         keyboardType="numeric"
+                        error={errors[`rep_${index}`]}
                       />
                     </Col>
                   </Row>
@@ -607,9 +694,10 @@ const UnifiedForm = ({ navigation, route }) => {
                       <Input
                         label="Phone number"
                         value={rep.phone}
-                        onChange={(val) => updateRepresentative(rep.id, 'phone', val)}
-                        placeholder="Enter phone number"
+                        onChange={(val) => updateRepresentative(rep.id, 'phone', val.replace(/[^0-9]/g, '').slice(0, 10))}
+                        placeholder="10-digit phone number"
                         keyboardType="numeric"
+                        error={errors[`rep_${index + 1}`]}
                       />
                     </Col>
                     <RemoveButton onPress={() => removeRepresentative(rep.id)} />
@@ -640,6 +728,7 @@ const UnifiedForm = ({ navigation, route }) => {
                 value={address}
                 onChange={setAddress}
                 placeholder="Enter street address"
+                error={errors.address}
               />
             )}
 
@@ -652,16 +741,17 @@ const UnifiedForm = ({ navigation, route }) => {
                       value={city}
                       onChange={setCity}
                       placeholder="Enter city"
+                      error={errors.city}
                     />
                   </Col>
                 )}
                 {show('state') && (
                   <Col>
-                    <Input
+                    <Dropdown
                       label="State"
                       value={state}
-                      onChange={setState}
-                      placeholder="Enter state"
+                      options={INDIA_STATES}
+                      onSelect={setState}
                     />
                   </Col>
                 )}
@@ -675,9 +765,10 @@ const UnifiedForm = ({ navigation, route }) => {
                     <Input
                       label="Pincode"
                       value={pincode}
-                      onChange={setPincode}
+                      onChange={(val) => setPincode(val.replace(/[^0-9]/g, '').slice(0, 6))}
                       placeholder="6-digit pincode"
                       keyboardType="numeric"
+                      error={errors.pincode}
                     />
                   </Col>
                 )}
@@ -721,6 +812,7 @@ const UnifiedForm = ({ navigation, route }) => {
                       onChange={setArea}
                       placeholder="Enter area"
                       keyboardType="numeric"
+                      error={errors.areaValue}
                     />
                   </Col>
                 )}
@@ -737,6 +829,7 @@ const UnifiedForm = ({ navigation, route }) => {
                       onChange={setPrice}
                       placeholder="₹ Enter amount"
                       keyboardType="numeric"
+                      error={errors.askingPrice}
                     />
                   </Col>
                 )}
@@ -756,7 +849,7 @@ const UnifiedForm = ({ navigation, route }) => {
         )}
 
         {/* ======== ROOMS ======== */}
-        {(show('numberOfBedrooms') || show('numberOfBathrooms') || show('totalToilets') || 
+        {(show('numberOfBedrooms') || show('numberOfBathrooms') || show('totalToilets') ||
           show('balconies') || show('guestWashroom') || show('servantRoom')) && (
           <>
             <Section title="Room Details" icon={ICONS.rooms} />
@@ -819,9 +912,9 @@ const UnifiedForm = ({ navigation, route }) => {
         )}
 
         {/* ======== PROPERTY FEATURES ======== */}
-        {(show('propertyStatus') || show('ageOfProperty') || show('facingDirection') || 
-          show('overlooking') || show('dimensions') || show('roadWidth') || show('totalFloors') || 
-          show('floorAvailable') || show('unitsPerFloor') || show('sidesOpen') || show('parking') || 
+        {(show('propertyStatus') || show('ageOfProperty') || show('facingDirection') ||
+          show('overlooking') || show('dimensions') || show('roadWidth') || show('totalFloors') ||
+          show('floorAvailable') || show('unitsPerFloor') || show('sidesOpen') || show('parking') ||
           show('lift')) && (
           <>
             <Section title="Property Features" icon={ICONS.features} />
@@ -896,6 +989,7 @@ const UnifiedForm = ({ navigation, route }) => {
                       onChange={setRoadWidth}
                       placeholder="Feet/Meter"
                       keyboardType="numeric"
+                      error={errors.roadWidth}
                     />
                   </Col>
                 )}
@@ -996,6 +1090,7 @@ const UnifiedForm = ({ navigation, route }) => {
                       onChange={setSecurityDeposit}
                       placeholder="₹ Enter amount"
                       keyboardType="numeric"
+                      error={errors.securityDeposit}
                     />
                   </Col>
                 )}
@@ -1007,6 +1102,7 @@ const UnifiedForm = ({ navigation, route }) => {
                       onChange={setMaintenance}
                       placeholder="₹ Per month"
                       keyboardType="numeric"
+                      error={errors.maintenance}
                     />
                   </Col>
                 )}
@@ -1026,7 +1122,7 @@ const UnifiedForm = ({ navigation, route }) => {
         )}
 
         {/* ======== APARTMENT ======== */}
-        {(show('projectName') || show('towerNo') || show('apartmentNo') || show('apartmentFloor') || 
+        {(show('projectName') || show('towerNo') || show('apartmentNo') || show('apartmentFloor') ||
           show('superArea') || show('coveredArea') || show('apartmentType')) && (
           <>
             <Section title="Apartment Details" icon={ICONS.apartment} />
@@ -1123,8 +1219,8 @@ const UnifiedForm = ({ navigation, route }) => {
         )}
 
         {/* ======== COMMERCIAL ======== */}
-        {(show('buildingName') || show('unitType') || show('floorNo') || show('furnishing') || 
-          show('workStations') || show('cabins') || show('acCount') || show('pantry') || 
+        {(show('buildingName') || show('unitType') || show('floorNo') || show('furnishing') ||
+          show('workStations') || show('cabins') || show('acCount') || show('pantry') ||
           show('facility')) && (
           <>
             <Section title="Commercial Details" icon={ICONS.commercial} />
@@ -1261,7 +1357,7 @@ const UnifiedForm = ({ navigation, route }) => {
         )}
 
         {/* ======== UPLOADS ======== */}
-        {(show('gallery') || show('document') || show('layout') || show('brochure') || 
+        {(show('gallery') || show('document') || show('layout') || show('brochure') ||
           show('rentAgreement') || show('notes')) && (
           <>
             <Section title="Documents & Media" icon={ICONS.documents} />
@@ -1270,7 +1366,27 @@ const UnifiedForm = ({ navigation, route }) => {
               <Row>
                 {show('gallery') && (
                   <Col>
-                    <Upload label="Gallery" file={gallery} onPress={() => pickImage(setGallery)} />
+                    <View style={styles.field}>
+                      <Text style={styles.label}>Gallery</Text>
+                      <TouchableOpacity style={[styles.input, styles.uploadBtn]} onPress={pickMultipleImages}>
+                        <Text style={gallery.length > 0 ? styles.inputText : styles.placeholder}>
+                          {gallery.length > 0 ? `${gallery.length} image(s) selected` : 'Upload'}
+                        </Text>
+                        <Image source={ICONS.upload} style={styles.uploadIconImg} resizeMode="contain" />
+                      </TouchableOpacity>
+                      {gallery.length > 0 && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryPreview}>
+                          {gallery.map((img, index) => (
+                            <View key={index} style={styles.galleryThumbWrap}>
+                              <Image source={{ uri: img.uri }} style={styles.galleryThumb} />
+                              <TouchableOpacity style={styles.galleryRemove} onPress={() => removeGalleryImage(index)}>
+                                <Text style={styles.galleryRemoveText}>✕</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ))}
+                        </ScrollView>
+                      )}
+                    </View>
                   </Col>
                 )}
                 {show('document') && (
@@ -1313,8 +1429,8 @@ const UnifiedForm = ({ navigation, route }) => {
         )}
 
         {/* ======== SUBMIT ======== */}
-        <TouchableOpacity 
-          style={[styles.submitBtn, loading && styles.submitBtnDisabled]} 
+        <TouchableOpacity
+          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -1409,6 +1525,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  inputError: {
+    borderColor: '#E24C4C',
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#E24C4C',
+    marginTop: 4,
   },
   textArea: {
     minHeight: 80,
@@ -1542,6 +1666,34 @@ const styles = StyleSheet.create({
   submitText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '700',
+  },
+  galleryPreview: {
+    marginTop: 8,
+  },
+  galleryThumbWrap: {
+    marginRight: 8,
+    position: 'relative',
+  },
+  galleryThumb: {
+    width: scale(70),
+    height: scale(70),
+    borderRadius: 8,
+  },
+  galleryRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#E24C4C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryRemoveText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: '700',
   },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   SafeAreaView,
   View,
@@ -98,12 +98,28 @@ const SECTIONS = [
   { title: 'Amenities', data: AMENITIES_DATA },
 ];
 
-const BuilderDetailsScreen = ({ navigation }) => {
-  const galleryImages = [
-    require('../../assets/images/property1.png'),
-    require('../../assets/images/property2.png'),
-    require('../../assets/images/property3.png'),
-  ];
+import { getInventryDetails } from '../../services/api/InventorydetailsApi';
+import { getImageUrl } from '../../services/api/api';
+
+const BuilderDetailsScreen = ({ navigation, route }) => {
+  const { property } = route.params || {};
+  const inventoryId = property?._id;
+  const [detail, setDetail] = useState(null);
+
+  useEffect(() => {
+    if (!inventoryId) return;
+    getInventryDetails(inventoryId)
+      .then(res => { if (res.success) setDetail(res.data); })
+      .catch(err => console.log('Detail Error:', err));
+  }, [inventoryId]);
+
+  const data = detail || property;
+
+  const galleryImages = useMemo(() => {
+    if (data?.gallery?.length > 0) return data.gallery.map(img => getImageUrl(img));
+    if (data?.image) return [getImageUrl(data.image)];
+    return [];
+  }, [data]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -116,10 +132,9 @@ const BuilderDetailsScreen = ({ navigation }) => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header Image */}
         <View style={styles.imageContainer}>
-          <Image
-            source={require('../../assets/images/rajauri.png')}
-            style={styles.mainImage}
-          />
+          {galleryImages.length > 0 && (
+            <Image source={{ uri: galleryImages[0] }} style={styles.mainImage} resizeMode="cover" />
+          )}
 
           <TouchableOpacity
             style={styles.backButton}
@@ -142,7 +157,7 @@ const BuilderDetailsScreen = ({ navigation }) => {
             contentContainerStyle={styles.galleryContainer}
             style={styles.galleryOverlay}
             renderItem={({ item }) => (
-              <Image source={item} style={styles.galleryImage} />
+              <Image source={{ uri: item }} style={styles.galleryImage} resizeMode="cover" />
             )}
           />
         </View>
@@ -152,28 +167,54 @@ const BuilderDetailsScreen = ({ navigation }) => {
           <View style={styles.titleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title} numberOfLines={2}>
-                Rajouri Garden
+                {data?.addressSnapshot?.locality || data?.addressSnapshot?.city || '-'}
               </Text>
 
               <Text style={styles.location} numberOfLines={2}>
-                122/A block, Rajouri Garden
+                {data?.addressSnapshot?.address}, {data?.addressSnapshot?.city}, {data?.addressSnapshot?.state}
+              </Text>
+
+              <Text style={styles.owner}>
+                Owner: {data?.ownerName || '-'}
               </Text>
             </View>
 
             <Text style={styles.price} numberOfLines={1} adjustsFontSizeToFit>
-              ₹1,00,000
+              ₹{data?.askingPrice || '-'}
             </Text>
           </View>
         </View>
 
-        {/* All detail sections — driven entirely by the SECTIONS array
-            above, so each one renders exactly once. */}
-        {SECTIONS.map((section) => (
-          <DetailSection
-            key={section.title}
-            title={section.title}
-            data={section.data}
-          />
+        {[
+          {
+            title: 'Property Details',
+            data: [
+              { label: 'Bedrooms', value: data?.numberOfBedrooms ?? '-' },
+              { label: 'Bathrooms', value: data?.numberOfBathrooms ?? '-' },
+              { label: 'Area', value: data?.area ? `${data.area.value} ${data.area.unit}` : '-' },
+              { label: 'Property Type', value: data?.inventoryType?.name ?? '-' },
+              { label: 'Status', value: data?.propertyStatus ?? '-' },
+              { label: 'Age', value: data?.ageOfProperty ?? '-' },
+              { label: 'Facing', value: data?.facingDirection ?? '-' },
+              { label: 'Overlooking', value: data?.overlooking ?? '-' },
+              { label: 'Road Width', value: data?.roadWidth ?? '-' },
+              { label: 'Total Floors', value: data?.totalFloors ?? '-' },
+              { label: 'Floor Available', value: data?.floorAvailable ?? '-' },
+              { label: 'Parking', value: data?.parking ?? '-' },
+              { label: 'Lift', value: data?.lift != null ? (data.lift ? 'Yes' : 'No') : '-' },
+            ].filter(i => i.value !== '-' && i.value != null),
+          },
+          {
+            title: 'Finance',
+            data: [
+              { label: 'Asking Price', value: data?.askingPrice ? `₹${data.askingPrice}` : '-' },
+              { label: 'Security Deposit', value: data?.securityDeposit ?? '-' },
+              { label: 'Maintenance', value: data?.maintenance ?? '-' },
+              { label: 'Other Charges', value: data?.otherCharges ?? '-' },
+            ].filter(i => i.value !== '-' && i.value != null),
+          },
+        ].filter(s => s.data.length > 0).map(section => (
+          <DetailSection key={section.title} title={section.title} data={section.data} />
         ))}
 
         {/* Bottom Space — clears the floating buttons */}
